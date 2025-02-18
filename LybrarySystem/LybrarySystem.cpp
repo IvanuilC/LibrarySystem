@@ -1,7 +1,8 @@
-﻿#include <iostream>
-#include <string>
+#include <iostream>
 #include <vector>
+#include <string>
 
+// Класс Book
 class Book {
 protected:
     std::string title;
@@ -9,84 +10,156 @@ protected:
     double price;
 
 public:
-    Book(const std::string& title, const std::string& author, double price)
-        : title(title), author(author), price(price) {}
+    Book(const std::string& t, const std::string& a, double p) : title(t), author(a), price(p) {}
 
-    double getPrice() const {
-        return price;
-    }
-
-    std::string getTitle() const {
-        return title;
-    }
+    double getPrice() const { return price; }
+    std::string getTitle() const { return title; }
 
     void displayDetails() const {
-        std::cout << "Title: " << title << ", Author: " << author << ", Price: " << price << "\n";
+        std::cout << "Title: " << title << ", Author: " << author << ", Price: " << price << std::endl;
     }
+
+    void setDiscount(double discount) { price -= price * (discount / 100); }
 };
 
+// Класс DigitalBook (наследует Book)
+class DigitalBook : public Book {
+private:
+    std::string url;
+
+public:
+    DigitalBook(const std::string& t, const std::string& a, double p, const std::string& u) 
+        : Book(t, a, p), url(u) {}
+
+    std::string getURL() const { return url; }
+};
+
+// Класс Member
 class Member {
+protected:
+    std::string name;
+    std::string memberId;
+    std::vector<Book> borrowedBooks;
+
+public:
+    Member(const std::string& n, const std::string& id) : name(n), memberId(id) {}
+
+    void borrowBook(Book& book) { borrowedBooks.push_back(book); }
+
+    size_t getBorrowedCount() const { return borrowedBooks.size(); }
+};
+
+// Класс PremiumMember (наследует Member)
+class PremiumMember : public Member {
+private:
+    int bonusPoints;
+
+public:
+    PremiumMember(const std::string& n, const std::string& id, int points) 
+        : Member(n, id), bonusPoints(points) {}
+
+    int getBonusPoints() const { return bonusPoints; }
+};
+
+// Класс Librarian
+class Librarian {
 protected:
     std::string name;
     std::string memberId;
 
 public:
-    Member(const std::string& name, const std::string& memberId)
-        : name(name), memberId(memberId) {}
+    Librarian(const std::string& n, const std::string& id) : name(n), memberId(id) {}
 
-    virtual void borrowBook(const Book& book) {
-        std::cout << name << " borrowed the book: " << book.getTitle() << "\n";
+    void addBook(std::vector<Book>& catalog, const Book& book) { catalog.push_back(book); }
+
+    bool isBookAvailable(const std::vector<Book>& catalog, const std::string& title) const {
+        for (const auto& book : catalog) {
+            if (book.getTitle() == title) return true;
+        }
+        return false;
     }
 };
 
-class Librarian : public Member {
-public:
-    Librarian(const std::string& name, const std::string& memberId)
-        : Member(name, memberId) {}
-
-    void borrowBook(const Book& book) override {
-        std::cout << name << " (Librarian) borrowed the book for maintenance: " << book.getTitle() << "\n";
-    }
-
-    virtual void addBook(std::vector<Book>& catalog, const Book& book) {
-        catalog.push_back(book);
-        std::cout << name << " added the book: " << book.getTitle() << "\n";
-    }
-};
-
+// Класс HeadLibrarian (усложнённый)
 class HeadLibrarian : public Librarian {
+private:
+    std::vector<Librarian> staff;
+
 public:
-    HeadLibrarian(const std::string& name, const std::string& memberId)
-        : Librarian(name, memberId) {}
+    HeadLibrarian(const std::string& n, const std::string& id) : Librarian(n, id) {}
 
-    void addBook(std::vector<Book>& catalog, const Book& book) override {
-        catalog.push_back(book);
-        std::cout << name << " (Head Librarian) added the book: " << book.getTitle() << "\n";
-    }
+    void applyDiscount(Book& book, double discount) { book.setDiscount(discount); }
 
-    void applyDiscount(Book& book, double discountPercentage) {
-        double discountAmount = book.getPrice() * (discountPercentage / 100);
-        std::cout << name << " applied a discount of " << discountPercentage << "% to the book: " << book.getTitle() << "\n";
+    size_t totalBooksManaged(const std::vector<Book>& libraryCatalog) const { return libraryCatalog.size(); }
+
+    void manageLibrarians(std::vector<Librarian>& librarians) { staff = librarians; }
+
+    bool isBookInLibrary(const std::vector<Book>& catalog, const std::string& title) const {
+        return isBookAvailable(catalog, title);
     }
 };
 
+// Класс Library
+class Library {
+private:
+    std::vector<Book> books;
+    std::vector<Member> members;
+
+public:
+    void addBook(Book& book) { books.push_back(book); }
+
+    void registerMember(Member& member) { members.push_back(member); }
+
+    bool loanBook(Member& member, const std::string& bookTitle) {
+        for (auto& book : books) {
+            if (book.getTitle() == bookTitle) {
+                member.borrowBook(book);
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+// Класс Transaction
+class Transaction {
+private:
+    Member member;
+    Book book;
+    std::string date;
+
+public:
+    Transaction(const Member& m, const Book& b, const std::string& d) : member(m), book(b), date(d) {}
+
+    void getTransactionInfo() const {
+        std::cout << "Transaction: " << member.getBorrowedCount() 
+                  << " books borrowed, Book: " << book.getTitle() 
+                  << ", Date: " << date << std::endl;
+    }
+};
+
+// Тестирование кода
 int main() {
-    std::vector<Book> catalog;
+    Book book1("C++ Primer", "Lippman", 45.99);
+    DigitalBook ebook("Effective C++", "Meyers", 39.99, "http://ebooks.com/effective_cpp");
 
-    HeadLibrarian headLibrarian("Alice", "HL001");
-    Librarian librarian("Bob", "L002");
-    Member member("Charlie", "M003");
+    Member member("Alice", "M123");
+    PremiumMember premiumMember("Bob", "P456", 100);
 
-    Book book1("The Great Gatsby", "F. Scott Fitzgerald", 15.99);
-    Book book2("1984", "George Orwell", 12.49);
+    Librarian librarian("John", "L001");
+    HeadLibrarian headLibrarian("Sarah", "H001");
 
-    headLibrarian.addBook(catalog, book1);
-    headLibrarian.addBook(catalog, book2);
 
-    librarian.borrowBook(book1);
-    member.borrowBook(book2);
+    Library library;
+    library.addBook(book1);
+    library.registerMember(member);
+
+    library.loanBook(member, "C++ Primer");
 
     headLibrarian.applyDiscount(book1, 10);
+
+    Transaction transaction(member, book1, "2025-02-18");
+    transaction.getTransactionInfo();
 
     return 0;
 }
